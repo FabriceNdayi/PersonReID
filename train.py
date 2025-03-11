@@ -26,6 +26,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import save_image
 import torchvision.transforms as T
 import torch.distributed as dist
+
 #from apex.parallel import DistributedDataParallel as DDP
 #from apex import amp
 from LATransformer.model import ClassBlock, LATransformer
@@ -38,7 +39,8 @@ writer = SummaryWriter()
 
 print("Number of CUDA: ",torch.cuda.device_count())
 print("device name: ",torch.cuda.get_device_name(0))
-os.environ['CUDA_VISIBLE_DEVICES']='0'
+os.environ['CUDA_VISIBLE_DEVICES']='1'
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 #device = "cuda"
 print("cuda: {}".format(torch.cuda.is_available()))
 torch.backends.cudnn.deterministic = True
@@ -49,7 +51,7 @@ torch.cuda.set_per_process_memory_fraction(0.8, 0)
 
 # ### Set Config Parameters
 
-batch_size = 16
+batch_size = 64
 num_epochs = 1000
 lr = 3e-4
 gamma = 0.7
@@ -72,9 +74,9 @@ def printsave2(*a):
 
 transform_train_list = [
     transforms.Resize((224,224), interpolation=3),
-    transforms.RandomRotation(5),
-    transforms.RandomGrayscale(0.1),
-    transforms.RandomHorizontalFlip(),
+    #transforms.RandomRotation(5),
+    #transforms.RandomGrayscale(0.1),
+    #transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]
@@ -88,7 +90,7 @@ data_transforms = {
 'val': transforms.Compose(transform_val_list),
 }
 image_datasets = {}
-data_dir = "data/Market-Pytorch/Market/"
+data_dir = "//220.69.157.21/Users/KMU/tensor/data/Market_occluded/"
 image_datasets['train'] = datasets.ImageFolder(os.path.join(data_dir, 'train'),
                                           data_transforms['train'])
 image_datasets['val'] = datasets.ImageFolder(os.path.join(data_dir, 'val'),
@@ -193,9 +195,6 @@ def train_one_epoch(
         data_time_m.update(time.time() - end)
         optimizer.zero_grad()
         output = model(data)  #model output
-        #print("output: ",output.shape)
-        #print("weight attention: ",weight_attn.shape)
-        # print("The output: ", output)
           
         score = 0.0    #attention score??
         output_predicts = []
@@ -249,10 +248,8 @@ def unfreeze_blocks(model, amount= 1):
     return model
 
 # ## TRAINING LOOP ##
-#Everything start here
 # Create LA Transformer
 model = LATransformer(vit_base, lmbd).to(device)
-#model = nn.DataParallel(model)
 # loss function
 criterion = nn.CrossEntropyLoss()
 # optimizer
@@ -282,6 +279,14 @@ except:
     pass
 output_dir = "model/" + name
 unfrozen_blocks = 0
+
+# Load the model checkpoint
+#checkpoint = torch.load('weights/model_state_dict.pth')
+#print("Checkpoint: ", checkpoint.keys())
+#model.state_dict(checkpoint['state_dict'])
+
+#start_epoch = checkpoint['epoch']
+
 for epoch in range(num_epochs):
     if epoch%unfreeze_after==0:
         unfrozen_blocks += 1
@@ -310,17 +315,17 @@ for epoch in range(num_epochs):
         save_network(model, epoch,name)
         print("SAVED!")
 
-fig=plt.figure(figsize=(10,10))
-ax1 = plt.subplot(2,1,1)
-x = list(range(len(train_loss)))
-y1 = train_loss
-ax1.plot(x,y1)
-ax1.set_title("train_loss")
-ax1.set_ylabel("train loss")
-ax2 = plt.subplot(2,1,2)
-# x2 = [i for i in range(len(acc_arr))]
-y2 = acc_arr
-ax2.plot(x,y2)
-ax2.set_title("acc_loss")
-ax2.set_ylabel("acc")
-plt.savefig('train_Erase_aff.png')
+# fig=plt.figure(figsize=(10,10))
+# ax1 = plt.subplot(2,1,1)
+# x = list(range(len(train_loss)))
+# y1 = train_loss
+# ax1.plot(x,y1)
+# ax1.set_title("train_loss")
+# ax1.set_ylabel("train loss")
+# ax2 = plt.subplot(2,1,2)
+# # x2 = [i for i in range(len(acc_arr))]
+# y2 = acc_arr
+# ax2.plot(x,y2)
+# ax2.set_title("acc_loss")
+# ax2.set_ylabel("acc")
+# plt.savefig('train_Erase_aff.png')
