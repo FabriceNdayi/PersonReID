@@ -90,7 +90,7 @@ data_transforms = {
 'val': transforms.Compose(transform_val_list),
 }
 image_datasets = {}
-data_dir = " "
+data_dir = " " #data
 image_datasets['train'] = datasets.ImageFolder(os.path.join(data_dir, 'train'),
                                           data_transforms['train'])
 image_datasets['val'] = datasets.ImageFolder(os.path.join(data_dir, 'val'),
